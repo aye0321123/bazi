@@ -225,6 +225,7 @@
             <textarea id="test-cookie" rows="4" placeholder="粘贴你的 Cookie..."></textarea>
             <label>Session ID:</label>
             <input type="text" id="test-session-id" placeholder="输入 Session ID..." value="26a7d080-283c-43c9-a741-23d8dfcb8512">
+            <button onclick="loadDefaultCookie()">加载默认 Cookie</button>
             <button onclick="testCookie()">测试 Cookie 有效性</button>
             <div id="cookie-test-log" class="log" style="margin-top: 15px;"></div>
         </div>
@@ -249,6 +250,13 @@
         document.getElementById('current-url').textContent = window.location.href;
         document.getElementById('user-agent').textContent = navigator.userAgent;
         document.getElementById('current-time').textContent = new Date().toLocaleString('zh-CN');
+
+        // 加载默认 Cookie
+        function loadDefaultCookie() {
+            const defaultCookie = "__Secure-authjs.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiNHBxaFNuWDBObkFfcXJHT0ZuNTZQdGY5S1dHRHVPYVJzUnAxdHZWQWs0US1INW5lcG5mSlotSGZPR01BQkdjSVVnNHNmMlF1Y1c2OEFLSkpHWlZhNXcifQ..zPqDaK1HNS9zApdo6n42bg.wnKcF_UzCAtW2rgxv4Vdr_QolzklOc3zOKn6om-EeCH5--BrWJcBW02QBUDNV0GRMbvX8YsIZkWeLBgMoC89KoW4lEPIX-MYMVmwRGgYoSD8sEQGlKErqpmYtx5d9ObGoCdTb1RJZ2_hRwyANLPljzvvDnTCb87cpyc1fbGVLBCeP8YbEoAPCxz0IOc4-1h7wUwYu0yq5B_Aw29tAyy1pZJ3yHsBkTl0rm_qC5iK5WL_hyQ7YIvr7dXAeDYczQ9FSFKQruvI8rj9sQA-GtZVnH-InbqD8K8dputZ5osTLvEWU3z-q-6RPwjVeb4RIDb4DnjeMw5bGLmTvs0Lwk_C5t-9MFXFSg88KKg8kOTcvMDuydPPUoOuB4jHyOllLagGsLP2R1akhqk_4mkJWDZCsad5M3yo0K-Rl-tT_qKh305SR8nTjiL2P56Nc3gORcUzmJLJnCC4EWq-ST1i2RGG-w.bSu3G44_j69nCywGAi-LfJy56hfKxzCr8zcAry6k220; _ga=GA1.1.550889415.1776392349; NEXT_LOCALE=zh; __Host-authjs.csrf-token=fc95dfb4971a460f49819353ac54f6427396f044cd3ba2e9beb361125baec646%7C2caf78c81dafb4f560541991482807bdd8ffb3266f166b3e3e1d5ba032c0b68b; __Secure-authjs.callback-url=https%3A%2F%2Fwww.bazi-ai.com%2Fzh; _ga_V7V71Z9C7T=GS2.1.s1776392349$o1$g1$t1776392373$j36$l0$h0";
+            document.getElementById('test-cookie').value = defaultCookie;
+            alert('✅ 已加载默认 Cookie');
+        }
 
         // 日志函数
         function addLog(containerId, message, type = 'info') {
@@ -280,27 +288,46 @@
             }
         }
 
-        // 测试 BaziAI API
+        // 测试 BaziAI API（通过后端）
         async function testBaziAPI() {
-            addLog('quick-test-log', '开始测试 BaziAI API...', 'info');
-            const url = 'https://www.bazi-ai.com/api/chat-session/26a7d080-283c-43c9-a741-23d8dfcb8512/messages';
+            addLog('quick-test-log', '开始测试 BaziAI API（通过后端）...', 'info');
+            
+            const cookie = document.getElementById('test-cookie').value.trim();
+            const sessionId = document.getElementById('test-session-id').value.trim();
+            
+            if (!cookie || !sessionId) {
+                addLog('quick-test-log', '⚠️ 请先填写 Cookie 和 Session ID，或先测试登录', 'warning');
+                addLog('quick-test-log', '尝试使用默认 Session ID 测试...', 'info');
+            }
             
             try {
-                addLog('quick-test-log', `请求 URL: ${url}`, 'info');
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
+                // 先登录（如果有 Cookie）
+                if (cookie && sessionId) {
+                    addLog('quick-test-log', '步骤 1: 登录...', 'info');
+                    const loginResponse = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ session_id: sessionId, cookie: cookie })
+                    });
+                    const loginData = await loginResponse.json();
+                    
+                    if (loginData.success) {
+                        addLog('quick-test-log', '✅ 登录成功', 'success');
+                    } else {
+                        addLog('quick-test-log', `❌ 登录失败: ${loginData.error}`, 'error');
+                        return;
                     }
-                });
+                }
                 
-                addLog('quick-test-log', `响应状态: ${response.status} ${response.statusText}`, 'info');
+                // 测试获取消息
+                addLog('quick-test-log', '步骤 2: 获取消息...', 'info');
+                const response = await fetch('/api/messages');
+                const data = await response.json();
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    addLog('quick-test-log', `✅ BaziAI API 可访问，返回 ${data.length} 条消息`, 'success');
+                if (data.success) {
+                    addLog('quick-test-log', `✅ BaziAI API 测试成功！获取到 ${data.data.length} 条消息`, 'success');
                 } else {
-                    addLog('quick-test-log', `❌ BaziAI API 返回错误: ${response.status}`, 'error');
+                    addLog('quick-test-log', `❌ BaziAI API 测试失败: ${data.error}`, 'error');
                 }
             } catch (error) {
                 addLog('quick-test-log', `❌ BaziAI API 请求失败: ${error.message}`, 'error');
@@ -343,7 +370,7 @@
             }
         }
 
-        // 测试 Cookie
+        // 测试 Cookie（通过后端）
         async function testCookie() {
             const cookie = document.getElementById('test-cookie').value.trim();
             const sessionId = document.getElementById('test-session-id').value.trim();
@@ -353,7 +380,7 @@
                 return;
             }
             
-            addLog('cookie-test-log', '开始测试 Cookie...', 'info');
+            addLog('cookie-test-log', '开始测试 Cookie（通过后端）...', 'info');
             addLog('cookie-test-log', `Cookie 长度: ${cookie.length} 字符`, 'info');
             addLog('cookie-test-log', `Session ID: ${sessionId}`, 'info');
             
@@ -364,26 +391,30 @@
                 addLog('cookie-test-log', '⚠️ Cookie 可能不完整（缺少 session-token）', 'warning');
             }
             
-            // 测试 API 连接
+            // 通过后端测试 Cookie
             try {
-                const url = `https://www.bazi-ai.com/api/chat-session/${sessionId}/messages`;
-                addLog('cookie-test-log', `测试 URL: ${url}`, 'info');
+                addLog('cookie-test-log', '通过后端 API 测试 Cookie 有效性...', 'info');
                 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Cookie': cookie,
-                        'Accept': 'application/json'
-                    }
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId, cookie: cookie })
                 });
                 
-                addLog('cookie-test-log', `响应状态: ${response.status}`, 'info');
+                const data = await response.json();
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    addLog('cookie-test-log', `✅ Cookie 有效！获取到 ${data.length} 条消息`, 'success');
+                if (data.success) {
+                    addLog('cookie-test-log', `✅ Cookie 有效！${data.message}`, 'success');
+                    
+                    // 尝试获取消息
+                    const msgResponse = await fetch('/api/messages');
+                    const msgData = await msgResponse.json();
+                    
+                    if (msgData.success) {
+                        addLog('cookie-test-log', `✅ 成功获取 ${msgData.data.length} 条消息`, 'success');
+                    }
                 } else {
-                    addLog('cookie-test-log', `❌ Cookie 可能已过期或无效（状态码: ${response.status}）`, 'error');
+                    addLog('cookie-test-log', `❌ Cookie 无效: ${data.error}`, 'error');
                 }
             } catch (error) {
                 addLog('cookie-test-log', `❌ 测试失败: ${error.message}`, 'error');
