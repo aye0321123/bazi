@@ -195,7 +195,22 @@ class BaziAIClient:
 @app.route('/')
 def index():
     """首页"""
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        # 如果模板加载失败，返回简单的 HTML
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>BaziAI API</title></head>
+        <body>
+            <h1>BaziAI API 服务正在运行</h1>
+            <p>错误: {str(e)}</p>
+            <p><a href="/health">健康检查</a></p>
+            <p><a href="/test">测试页面</a></p>
+        </body>
+        </html>
+        """, 200
 
 
 @app.route('/test')
