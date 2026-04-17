@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 调试页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #4ec9b0;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .section {
+            background: #252526;
+            border: 1px solid #3e3e42;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            color: #569cd6;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            color: #9cdcfe;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            color: #d4d4d4;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin-right: 10px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #1177bb;
+        }
+
+        button.success {
+            background: #0e7c0e;
+        }
+
+        button.success:hover {
+            background: #16a316;
+        }
+
+        button.danger {
+            background: #c72e2e;
+        }
+
+        button.danger:hover {
+            background: #e03e3e;
+        }
+
+        .response {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .response pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #ce9178;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .status.success {
+            background: #0e7c0e;
+            color: white;
+        }
+
+        .status.error {
+            background: #c72e2e;
+            color: white;
+        }
+
+        .status.info {
+            background: #0e639c;
+            color: white;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .log {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            padding: 5px;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #858585;
+            margin-right: 10px;
+        }
+
+        .log-success {
+            color: #4ec9b0;
+        }
+
+        .log-error {
+            color: #f48771;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 API 调试控制台</h1>
+
+        <!-- 配置区 -->
+        <div class="section">
+            <h2>📝 配置信息</h2>
+            <div class="form-group">
+                <label>Session ID:</label>
+                <input type="text" id="session-id" placeholder="输入 Session ID">
+            </div>
+            <div class="form-group">
+                <label>Cookie:</label>
+                <textarea id="cookie" placeholder="输入完整的 Cookie"></textarea>
+            </div>
+            <button onclick="testLogin()">🔐 测试登录</button>
+            <button class="danger" onclick="testLogout()">🚪 测试登出</button>
+            <div id="login-response" class="response" style="display: none;"></div>
+        </div>
+
+        <div class="grid">
+            <!-- 发送消息 -->
+            <div class="section">
+                <h2>📤 发送消息</h2>
+                <div class="form-group">
+                    <label>消息内容:</label>
+                    <textarea id="message-content" placeholder="输入要发送的消息">请帮我分析一下运势</textarea>
+                </div>
+                <button class="success" onclick="testSendMessage()">发送消息</button>
+                <div id="send-response" class="response" style="display: none;"></div>
+            </div>
+
+            <!-- 获取消息 -->
+            <div class="section">
+                <h2>📥 获取消息</h2>
+                <button onclick="testGetMessages()">获取所有消息</button>
+                <button onclick="testExport()">导出记录</button>
+                <div id="messages-response" class="response" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- 健康检查 -->
+        <div class="section">
+            <h2>❤️ 健康检查</h2>
+            <button onclick="testHealth()">检查服务状态</button>
+            <div id="health-response" class="response" style="display: none;"></div>
+        </div>
+
+        <!-- 操作日志 -->
+        <div class="section">
+            <h2>📋 操作日志</h2>
+            <button onclick="clearLog()">清空日志</button>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // 日志功能
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const time = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'log-success' : type === 'error' ? 'log-error' : '';
+            
+            entry.innerHTML = `<span class="log-time">[${time}]</span><span class="${className}">${message}</span>`;
+            log.insertBefore(entry, log.firstChild);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            addLog('日志已清空', 'info');
+        }
+
+        // 显示响应
+        function showResponse(elementId, data, status) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            
+            const statusClass = status === 'success' ? 'success' : status === 'error' ? 'error' : 'info';
+            const statusText = status === 'success' ? '✅ 成功' : status === 'error' ? '❌ 失败' : 'ℹ️ 信息';
+            
+            element.innerHTML = `
+                <div class="status ${statusClass}">${statusText}</div>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+
+        // 测试登录
+        async function testLogin() {
+            const sessionId = document.getElementById('session-id').value.trim();
+            const cookie = document.getElementById('cookie').value.trim();
+
+            if (!sessionId || !cookie) {
+                showResponse('login-response', { error: 'Session ID 和 Cookie 不能为空' }, 'error');
+                addLog('登录失败: 缺少必要参数', 'error');
+                return;
+            }
+
+            addLog('正在测试登录...', 'info');
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId, cookie: cookie })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResponse('login-response', result, 'success');
+                    addLog('登录成功！', 'success');
+                } else {
+                    showResponse('login-response', result, 'error');
+                    addLog('登录失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showResponse('login-response', { error: error.message }, 'error');
+                addLog('登录请求失败: ' + error.message, 'error');
+            }
+        }
+
+        // 测试登出
+        async function testLogout() {
+            addLog('正在测试登出...', 'info');
+
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                const result = await response.json();
+                
+                showResponse('login-response', result, 'success');
+                addLog('登出成功！', 'success');
+            } catch (error) {
+                showResponse('login-response', { error: error.message }, 'error');
+                addLog('登出失败: ' + error.message, 'error');
+            }
+        }
+
+        // 测试发送消息
+        async function testSendMessage() {
+            const content = document.getElementById('message-content').value.trim();
+
+            if (!content) {
+                showResponse('send-response', { error: '消息内容不能为空' }, 'error');
+                addLog('发送失败: 消息为空', 'error');
+                return;
+            }
+
+            addLog('正在发送消息: ' + content.substring(0, 20) + '...', 'info');
+
+            try {
+                const response = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: content })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResponse('send-response', result, 'success');
+                    addLog('消息发送成功！', 'success');
+                } else {
+                    showResponse('send-response', result, 'error');
+                    addLog('消息发送失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showResponse('send-response', { error: error.message }, 'error');
+                addLog('发送请求失败: ' + error.message, 'error');
+            }
+        }
+
+        // 测试获取消息
+        async function testGetMessages() {
+            addLog('正在获取消息列表...', 'info');
+
+            try {
+                const response = await fetch('/api/messages');
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResponse('messages-response', result, 'success');
+                    addLog(`获取成功！共 ${result.data.length} 条消息`, 'success');
+                } else {
+                    showResponse('messages-response', result, 'error');
+                    addLog('获取失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showResponse('messages-response', { error: error.message }, 'error');
+                addLog('获取请求失败: ' + error.message, 'error');
+            }
+        }
+
+        // 测试导出
+        async function testExport() {
+            addLog('正在导出聊天记录...', 'info');
+
+            try {
+                const response = await fetch('/api/export');
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResponse('messages-response', result, 'success');
+                    addLog('导出成功！文件名: ' + result.filename, 'success');
+                    
+                    // 自动下载
+                    const dataStr = JSON.stringify(result.data, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = result.filename;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                } else {
+                    showResponse('messages-response', result, 'error');
+                    addLog('导出失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showResponse('messages-response', { error: error.message }, 'error');
+                addLog('导出请求失败: ' + error.message, 'error');
+            }
+        }
+
+        // 测试健康检查
+        async function testHealth() {
+            addLog('正在检查服务健康状态...', 'info');
+
+            try {
+                const response = await fetch('/health');
+                const result = await response.json();
+                
+                showResponse('health-response', result, 'success');
+                addLog('服务状态: ' + result.status, 'success');
+            } catch (error) {
+                showResponse('health-response', { error: error.message }, 'error');
+                addLog('健康检查失败: ' + error.message, 'error');
+            }
+        }
+
+        // 页面加载时的初始化
+        window.onload = function() {
+            addLog('API 调试控制台已就绪', 'success');
+            addLog('请先输入 Session ID 和 Cookie，然后点击"测试登录"', 'info');
+        };
+    </script>
+</body>
+</html>

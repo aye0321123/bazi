@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天机阁 - 传统智慧 现代科技</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1810 50%, #1a1a1a 100%);
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(200, 22, 29, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(201, 176, 55, 0.1) 0%, transparent 50%),
+                linear-gradient(135deg, #1a1a1a 0%, #2d1810 50%, #1a1a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                repeating-linear-gradient(90deg, rgba(201, 176, 55, 0.03) 0px, transparent 1px, transparent 40px),
+                repeating-linear-gradient(0deg, rgba(201, 176, 55, 0.03) 0px, transparent 1px, transparent 40px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            background: linear-gradient(to bottom, #faf8f3 0%, #f5f1e8 100%);
+            border-radius: 0;
+            box-shadow: 
+                0 0 0 2px #c9b037,
+                0 0 0 4px #8b0000,
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: repeating-linear-gradient(
+                90deg,
+                #c9b037 0px,
+                #c9b037 20px,
+                #8b0000 20px,
+                #8b0000 40px
+            );
+        }
+
+        .container::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: repeating-linear-gradient(
+                90deg,
+                #c9b037 0px,
+                #c9b037 20px,
+                #8b0000 20px,
+                #8b0000 40px
+            );
+        }
+
+        .header {
+            background: linear-gradient(135deg, #8b0000 0%, #c8161d 50%, #8b0000 100%);
+            background-image:
+                radial-gradient(circle at 30% 50%, rgba(201, 176, 55, 0.2) 0%, transparent 50%),
+                linear-gradient(135deg, #8b0000 0%, #c8161d 50%, #8b0000 100%);
+            color: #ffd700;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            border-bottom: 3px solid #c9b037;
+        }
+
+        .header::before {
+            content: '☯';
+            position: absolute;
+            top: 10px;
+            left: 30px;
+            font-size: 2em;
+            opacity: 0.3;
+            animation: rotate 20s linear infinite;
+        }
+
+        .header::after {
+            content: '☯';
+            position: absolute;
+            top: 10px;
+            right: 30px;
+            font-size: 2em;
+            opacity: 0.3;
+            animation: rotate 20s linear infinite reverse;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .header h1 {
+            font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            letter-spacing: 8px;
+        }
+
+        .header p {
+            opacity: 0.95;
+            font-size: 1.1em;
+            font-family: 'Noto Serif SC', serif;
+            letter-spacing: 2px;
+        }
+
+        .content {
+            padding: 40px 30px;
+            background: linear-gradient(to bottom, #faf8f3 0%, #f5f1e8 100%);
+        }
+
+        /* 登录表单 */
+        .login-form {
+            display: block;
+        }
+
+        .login-form.hidden {
+            display: none;
+        }
+
+        .login-form h2 {
+            font-family: 'Noto Serif SC', serif;
+            color: #8b0000;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.8em;
+            letter-spacing: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #8b0000;
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.1em;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #c9b037;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: #fff;
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #c8161d;
+            box-shadow: 0 0 0 3px rgba(200, 22, 29, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #8b0000 0%, #c8161d 50%, #8b0000 100%);
+            color: #ffd700;
+            border: 2px solid #c9b037;
+            padding: 14px 30px;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            font-family: 'Noto Serif SC', serif;
+            letter-spacing: 4px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(200, 22, 29, 0.4);
+            background: linear-gradient(135deg, #c8161d 0%, #ff4444 50%, #c8161d 100%);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #4a4a4a 0%, #6c757d 50%, #4a4a4a 100%);
+            color: #fff;
+            margin-top: 10px;
+        }
+
+        /* 聊天界面 */
+        .chat-container {
+            display: none;
+        }
+
+        .chat-container.active {
+            display: block;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #c9b037;
+        }
+
+        .chat-header h2 {
+            color: #8b0000;
+            font-family: 'Noto Serif SC', serif;
+            letter-spacing: 3px;
+        }
+
+        .chat-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            width: auto;
+            letter-spacing: 2px;
+        }
+
+        .messages-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 2px solid #c9b037;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: linear-gradient(to bottom, #fffef8 0%, #faf8f3 100%);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .message {
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            border-radius: 4px;
+            max-width: 80%;
+            animation: fadeIn 0.3s;
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            background: linear-gradient(135deg, #8b0000 0%, #c8161d 100%);
+            color: #ffd700;
+            margin-left: auto;
+            text-align: right;
+            border: 2px solid #c9b037;
+            box-shadow: 2px 2px 8px rgba(139, 0, 0, 0.3);
+        }
+
+        .message.assistant {
+            background: #fff;
+            border: 2px solid #c9b037;
+            color: #333;
+            box-shadow: 2px 2px 8px rgba(201, 176, 55, 0.2);
+        }
+
+        .message-role {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            opacity: 0.9;
+            font-family: 'Noto Serif SC', serif;
+        }
+
+        .message-content {
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 15px;
+        }
+
+        .message-time {
+            font-size: 0.75em;
+            opacity: 0.7;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-container textarea {
+            flex: 1;
+            min-height: 70px;
+            max-height: 150px;
+            border: 2px solid #c9b037;
+            background: #fff;
+        }
+
+        .input-container .btn {
+            width: auto;
+            padding: 14px 30px;
+        }
+
+        /* 提示信息 */
+        .alert {
+            padding: 14px 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            animation: slideDown 0.3s;
+            border-left: 4px solid;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left-color: #4caf50;
+        }
+
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border-left-color: #f44336;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border-left-color: #2196f3;
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 215, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffd700;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 帮助文本 */
+        .help-text {
+            font-size: 0.9em;
+            color: #8b6914;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .help-link {
+            color: #c8161d;
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 1px dashed #c8161d;
+        }
+
+        .help-link:hover {
+            color: #8b0000;
+            border-bottom-style: solid;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .messages-container {
+                height: 300px;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+
+            .input-container {
+                flex-direction: column;
+            }
+
+            .input-container .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔮 天机阁 🔮</h1>
+            <p>传统智慧 · 现代科技 · 洞察天机</p>
+        </div>
+
+        <div class="content">
+            <!-- 提示信息 -->
+            <div id="alert-container"></div>
+
+            <!-- 登录表单 -->
+            <div id="login-form" class="login-form">
+                <h2>✨ 登录配置 ✨</h2>
+                
+                <!-- 添加调试模式切换 -->
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <label style="display: inline-flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="debug-mode" style="width: auto; margin-right: 10px;" onchange="toggleDebugMode()">
+                        <span style="color: #c8161d; font-weight: bold;">🔧 调试模式</span>
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="session-id">📜 Session ID</label>
+                    <input type="text" id="session-id" placeholder="从浏览器地址栏复制会话ID" value="26a7d080-283c-43c9-a741-23d8dfcb8512">
+                    <p class="help-text">示例: 26a7d080-283c-43c9-a741-23d8dfcb8512</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="cookie">🔑 Cookie</label>
+                    <textarea id="cookie" placeholder="从浏览器开发者工具复制完整的 Cookie"></textarea>
+                    <p class="help-text">
+                        不知道如何获取？
+                        <a href="#" class="help-link" onclick="showHelp(); return false;">查看帮助</a>
+                    </p>
+                </div>
+
+                <button class="btn" onclick="login()">
+                    <span id="login-btn-text">🚪 登录天机阁</span>
+                </button>
+                
+                <!-- 调试信息区域 -->
+                <div id="debug-info" style="display: none; margin-top: 20px; padding: 15px; background: #1e1e1e; border: 2px solid #c9b037; border-radius: 4px; color: #4ec9b0; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;">
+                    <div style="color: #ffd700; font-weight: bold; margin-bottom: 10px;">📋 调试日志</div>
+                    <div id="debug-log"></div>
+                </div>
+            </div>
+
+            <!-- 聊天界面 -->
+            <div id="chat-container" class="chat-container">
+                <div class="chat-header">
+                    <h2>💬 问天机</h2>
+                    <div class="chat-actions">
+                        <button class="btn btn-small" onclick="createNewChat()">✨ 新对话</button>
+                        <button class="btn btn-small" onclick="refreshMessages()">🔄 刷新</button>
+                        <button class="btn btn-small" onclick="exportChat()">📥 导出</button>
+                        <button class="btn btn-small btn-secondary" onclick="logout()">🚪 登出</button>
+                    </div>
+                </div>
+
+                <div id="messages-container" class="messages-container">
+                    <p style="text-align: center; color: #8b6914; font-family: 'Noto Serif SC', serif;">加载中...</p>
+                </div>
+
+                <div class="input-container">
+                    <textarea id="message-input" placeholder="请输入您的问题，天机阁为您解惑..."></textarea>
+                    <button class="btn" onclick="sendMessage()">
+                        <span id="send-btn-text">📤 发送</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 调试模式
+        let debugMode = false;
+        
+        function toggleDebugMode() {
+            debugMode = document.getElementById('debug-mode').checked;
+            document.getElementById('debug-info').style.display = debugMode ? 'block' : 'none';
+            if (debugMode) {
+                addDebugLog('🔧 调试模式已启用', 'info');
+            }
+        }
+        
+        function addDebugLog(message, type = 'info') {
+            if (!debugMode) return;
+            
+            const log = document.getElementById('debug-log');
+            const time = new Date().toLocaleTimeString();
+            const colors = {
+                'info': '#4ec9b0',
+                'success': '#16a316',
+                'error': '#f48771',
+                'warning': '#dcdcaa'
+            };
+            const color = colors[type] || colors.info;
+            
+            const entry = document.createElement('div');
+            entry.style.marginBottom = '5px';
+            entry.style.color = color;
+            entry.innerHTML = `[${time}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // 显示提示信息
+        function showAlert(message, type = 'info') {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+            
+            addDebugLog(`Alert: ${message}`, type);
+        }
+
+        // 登录
+        async function login() {
+            const sessionId = document.getElementById('session-id').value.trim();
+            const cookie = document.getElementById('cookie').value.trim();
+
+            addDebugLog(`尝试登录 - Session ID: ${sessionId.substring(0, 20)}...`, 'info');
+
+            if (!sessionId || !cookie) {
+                showAlert('请填写 Session ID 和 Cookie', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('login-btn-text');
+            btn.innerHTML = '<span class="loading"></span> 登录中...';
+            
+            addDebugLog('发送登录请求到 /api/login', 'info');
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId, cookie: cookie })
+                });
+
+                addDebugLog(`响应状态: ${response.status} ${response.statusText}`, 'info');
+
+                const result = await response.json();
+                addDebugLog(`响应数据: ${JSON.stringify(result)}`, 'info');
+
+                if (result.success) {
+                    showAlert('登录成功！', 'success');
+                    addDebugLog('登录成功，切换到聊天界面', 'success');
+                    document.getElementById('login-form').classList.add('hidden');
+                    document.getElementById('chat-container').classList.add('active');
+                    loadMessages();
+                } else {
+                    showAlert(result.error || '登录失败', 'error');
+                    addDebugLog(`登录失败: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert('网络错误: ' + error.message, 'error');
+                addDebugLog(`网络错误: ${error.message}`, 'error');
+            } finally {
+                btn.textContent = '🚪 登录天机阁';
+            }
+        }
+
+        // 登出
+        async function logout() {
+            if (!confirm('确定要登出吗？')) return;
+
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                location.reload();
+            } catch (error) {
+                showAlert('登出失败: ' + error.message, 'error');
+            }
+        }
+
+        // 加载消息
+        async function loadMessages() {
+            try {
+                const response = await fetch('/api/messages');
+                const result = await response.json();
+
+                if (result.success) {
+                    displayMessages(result.data);
+                } else {
+                    showAlert(result.error || '加载消息失败', 'error');
+                }
+            } catch (error) {
+                showAlert('网络错误: ' + error.message, 'error');
+            }
+        }
+
+        // 显示消息
+        function displayMessages(messages) {
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '';
+
+            if (messages.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6c757d;">暂无消息，开始对话吧！</p>';
+                return;
+            }
+
+            messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.role}`;
+
+                const roleText = msg.role === 'user' ? '👤 您' : '🤖 AI';
+                const time = new Date(msg.created_at).toLocaleString('zh-CN');
+
+                messageDiv.innerHTML = `
+                    <div class="message-role">${roleText}</div>
+                    <div class="message-content">${escapeHtml(msg.content)}</div>
+                    <div class="message-time">${time}</div>
+                `;
+
+                container.appendChild(messageDiv);
+            });
+
+            // 滚动到底部
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+
+            if (!content) {
+                showAlert('请输入消息内容', 'error');
+                return;
+            }
+
+            addDebugLog(`发送消息: ${content.substring(0, 50)}...`, 'info');
+
+            const btn = document.getElementById('send-btn-text');
+            btn.innerHTML = '<span class="loading"></span> 发送中...';
+            input.disabled = true;
+
+            try {
+                const response = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: content })
+                });
+
+                const result = await response.json();
+                addDebugLog(`发送响应: ${JSON.stringify(result)}`, result.success ? 'success' : 'error');
+
+                if (result.success) {
+                    input.value = '';
+                    showAlert('消息已发送', 'success');
+                    
+                    // 等待2秒后刷新消息
+                    setTimeout(() => {
+                        loadMessages();
+                    }, 2000);
+                } else {
+                    showAlert(result.error || '发送失败', 'error');
+                }
+            } catch (error) {
+                showAlert('网络错误: ' + error.message, 'error');
+                addDebugLog(`发送错误: ${error.message}`, 'error');
+            } finally {
+                btn.textContent = '📤 发送';
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
+        // 刷新消息
+        function refreshMessages() {
+            showAlert('正在刷新...', 'info');
+            loadMessages();
+        }
+
+        // 导出聊天记录
+        async function exportChat() {
+            try {
+                const response = await fetch('/api/export');
+                const result = await response.json();
+
+                if (result.success) {
+                    const dataStr = JSON.stringify(result.data, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = result.filename;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showAlert('导出成功！', 'success');
+                } else {
+                    showAlert(result.error || '导出失败', 'error');
+                }
+            } catch (error) {
+                showAlert('导出错误: ' + error.message, 'error');
+            }
+        }
+
+        // 创建新对话
+        async function createNewChat() {
+            const message = prompt('请输入第一条消息（可选，留空则只创建新对话）：');
+            
+            // 如果用户点击取消，则不执行
+            if (message === null) return;
+            
+            addDebugLog('创建新对话...', 'info');
+            
+            try {
+                let result;
+                
+                if (message && message.trim()) {
+                    // 创建新对话并发送消息
+                    addDebugLog(`创建新对话并发送消息: ${message.substring(0, 50)}...`, 'info');
+                    const response = await fetch('/api/create-and-send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: message.trim() })
+                    });
+                    result = await response.json();
+                } else {
+                    // 只创建新对话
+                    addDebugLog('只创建新对话，不发送消息', 'info');
+                    const response = await fetch('/api/create-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    result = await response.json();
+                }
+                
+                addDebugLog(`创建响应: ${JSON.stringify(result)}`, result.success ? 'success' : 'error');
+                
+                if (result.success) {
+                    showAlert(`新对话创建成功！会话 ID: ${result.session_id}`, 'success');
+                    
+                    // 显示对话链接
+                    if (result.chat_url) {
+                        const openInBrowser = confirm(`新对话已创建！\n\n会话 ID: ${result.session_id}\n\n是否在新标签页中打开？`);
+                        if (openInBrowser) {
+                            window.open(result.chat_url, '_blank');
+                        }
+                    }
+                    
+                    // 刷新消息列表
+                    setTimeout(() => {
+                        loadMessages();
+                    }, 1000);
+                } else {
+                    showAlert(result.error || '创建新对话失败', 'error');
+                }
+            } catch (error) {
+                showAlert('创建新对话错误: ' + error.message, 'error');
+                addDebugLog(`创建错误: ${error.message}`, 'error');
+            }
+        }
+
+        // 显示帮助
+        function showHelp() {
+            alert(`获取 Session ID 和 Cookie 的步骤：
+
+1. 登录 BaziAI 网站 (https://www.bazi-ai.com)
+
+2. 获取 Session ID:
+   - 从浏览器地址栏复制
+   - 格式: https://www.bazi-ai.com/zh/chat/[这里是Session ID]
+
+3. 获取 Cookie:
+   - 按 F12 打开开发者工具
+   - 切换到 Network (网络) 标签
+   - 点击 Fetch/XHR 过滤器
+   - 在网站上发送一条消息
+   - 点击出现的 messages 请求
+   - 在 Headers 中找到 Cookie 字段
+   - 复制完整的 Cookie 值
+
+如需更多帮助，请查看项目文档。`);
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 回车发送
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('message-input');
+            if (input) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
