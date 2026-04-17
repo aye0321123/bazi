@@ -198,6 +198,12 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/test')
+def test_page():
+    """测试页面"""
+    return render_template('test.html')
+
+
 @app.route('/debug')
 def debug_page():
     """API 调试页面"""
@@ -357,5 +363,8 @@ def health():
 
 
 if __name__ == '__main__':
-    # 开发环境
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # 从环境变量获取端口，默认 5000
+    port = int(os.environ.get('PORT', 5000))
+    # 生产环境不使用 debug 模式
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    app.run(host='0.0.0.0', port=port, debug=debug)

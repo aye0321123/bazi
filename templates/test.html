@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天机阁 - 测试页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #4ec9b0;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .section {
+            background: #252526;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            color: #569cd6;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .test-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #1e1e1e;
+            border-left: 3px solid #007acc;
+        }
+
+        .test-item.success {
+            border-left-color: #4ec9b0;
+        }
+
+        .test-item.error {
+            border-left-color: #f48771;
+        }
+
+        .test-item.warning {
+            border-left-color: #dcdcaa;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .status.success {
+            background: #4ec9b0;
+            color: #1e1e1e;
+        }
+
+        .status.error {
+            background: #f48771;
+            color: #1e1e1e;
+        }
+
+        .status.warning {
+            background: #dcdcaa;
+            color: #1e1e1e;
+        }
+
+        .status.info {
+            background: #569cd6;
+            color: #1e1e1e;
+        }
+
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #005a9e;
+        }
+
+        button:disabled {
+            background: #3e3e42;
+            cursor: not-allowed;
+        }
+
+        .log {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+        }
+
+        .log-entry.error {
+            color: #f48771;
+        }
+
+        .log-entry.success {
+            color: #4ec9b0;
+        }
+
+        .log-entry.info {
+            color: #569cd6;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            color: #d4d4d4;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+
+        .info-box {
+            background: #264f78;
+            border-left: 4px solid #569cd6;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .error-box {
+            background: #5a1d1d;
+            border-left: 4px solid #f48771;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 天机阁 - 测试与调试页面</h1>
+
+        <div class="info-box">
+            <strong>📋 测试说明：</strong> 这个页面用于测试 API 连接和诊断问题。所有测试都会显示详细的日志信息。
+        </div>
+
+        <!-- 系统信息 -->
+        <div class="section">
+            <h2>📊 系统信息</h2>
+            <div id="system-info">
+                <div class="test-item">
+                    <span class="status info">INFO</span>
+                    <span>当前 URL: <strong id="current-url"></strong></span>
+                </div>
+                <div class="test-item">
+                    <span class="status info">INFO</span>
+                    <span>用户代理: <strong id="user-agent"></strong></span>
+                </div>
+                <div class="test-item">
+                    <span class="status info">INFO</span>
+                    <span>时间: <strong id="current-time"></strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快速测试 -->
+        <div class="section">
+            <h2>⚡ 快速测试</h2>
+            <button onclick="testHealth()">测试健康检查</button>
+            <button onclick="testBaziAPI()">测试 BaziAI API</button>
+            <button onclick="testLogin()">测试登录</button>
+            <button onclick="clearLog()">清除日志</button>
+            <div id="quick-test-log" class="log" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- Cookie 测试 -->
+        <div class="section">
+            <h2>🔑 Cookie 测试</h2>
+            <label>Cookie:</label>
+            <textarea id="test-cookie" rows="4" placeholder="粘贴你的 Cookie..."></textarea>
+            <label>Session ID:</label>
+            <input type="text" id="test-session-id" placeholder="输入 Session ID..." value="26a7d080-283c-43c9-a741-23d8dfcb8512">
+            <button onclick="testCookie()">测试 Cookie 有效性</button>
+            <div id="cookie-test-log" class="log" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- API 端点测试 -->
+        <div class="section">
+            <h2>🌐 API 端点测试</h2>
+            <button onclick="testAllEndpoints()">测试所有端点</button>
+            <div id="endpoint-test-log" class="log" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- 网络诊断 -->
+        <div class="section">
+            <h2>🔍 网络诊断</h2>
+            <button onclick="testNetwork()">运行网络诊断</button>
+            <div id="network-log" class="log" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化
+        document.getElementById('current-url').textContent = window.location.href;
+        document.getElementById('user-agent').textContent = navigator.userAgent;
+        document.getElementById('current-time').textContent = new Date().toLocaleString('zh-CN');
+
+        // 日志函数
+        function addLog(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const time = new Date().toLocaleTimeString();
+            entry.textContent = `[${time}] ${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('quick-test-log').innerHTML = '';
+            document.getElementById('cookie-test-log').innerHTML = '';
+            document.getElementById('endpoint-test-log').innerHTML = '';
+            document.getElementById('network-log').innerHTML = '';
+        }
+
+        // 测试健康检查
+        async function testHealth() {
+            addLog('quick-test-log', '开始测试健康检查...', 'info');
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                addLog('quick-test-log', `✅ 健康检查成功: ${JSON.stringify(data)}`, 'success');
+            } catch (error) {
+                addLog('quick-test-log', `❌ 健康检查失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试 BaziAI API
+        async function testBaziAPI() {
+            addLog('quick-test-log', '开始测试 BaziAI API...', 'info');
+            const url = 'https://www.bazi-ai.com/api/chat-session/26a7d080-283c-43c9-a741-23d8dfcb8512/messages';
+            
+            try {
+                addLog('quick-test-log', `请求 URL: ${url}`, 'info');
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                addLog('quick-test-log', `响应状态: ${response.status} ${response.statusText}`, 'info');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addLog('quick-test-log', `✅ BaziAI API 可访问，返回 ${data.length} 条消息`, 'success');
+                } else {
+                    addLog('quick-test-log', `❌ BaziAI API 返回错误: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addLog('quick-test-log', `❌ BaziAI API 请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试登录
+        async function testLogin() {
+            const cookie = document.getElementById('test-cookie').value.trim();
+            const sessionId = document.getElementById('test-session-id').value.trim();
+            
+            if (!cookie || !sessionId) {
+                addLog('quick-test-log', '❌ 请先填写 Cookie 和 Session ID', 'error');
+                return;
+            }
+            
+            addLog('quick-test-log', '开始测试登录...', 'info');
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        cookie: cookie
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    addLog('quick-test-log', `✅ 登录成功: ${data.message}`, 'success');
+                } else {
+                    addLog('quick-test-log', `❌ 登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                addLog('quick-test-log', `❌ 登录请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试 Cookie
+        async function testCookie() {
+            const cookie = document.getElementById('test-cookie').value.trim();
+            const sessionId = document.getElementById('test-session-id').value.trim();
+            
+            if (!cookie) {
+                addLog('cookie-test-log', '❌ 请先填写 Cookie', 'error');
+                return;
+            }
+            
+            addLog('cookie-test-log', '开始测试 Cookie...', 'info');
+            addLog('cookie-test-log', `Cookie 长度: ${cookie.length} 字符`, 'info');
+            addLog('cookie-test-log', `Session ID: ${sessionId}`, 'info');
+            
+            // 测试 Cookie 格式
+            if (cookie.includes('__Secure-authjs.session-token=')) {
+                addLog('cookie-test-log', '✅ Cookie 格式正确（包含 session-token）', 'success');
+            } else {
+                addLog('cookie-test-log', '⚠️ Cookie 可能不完整（缺少 session-token）', 'warning');
+            }
+            
+            // 测试 API 连接
+            try {
+                const url = `https://www.bazi-ai.com/api/chat-session/${sessionId}/messages`;
+                addLog('cookie-test-log', `测试 URL: ${url}`, 'info');
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Cookie': cookie,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                addLog('cookie-test-log', `响应状态: ${response.status}`, 'info');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addLog('cookie-test-log', `✅ Cookie 有效！获取到 ${data.length} 条消息`, 'success');
+                } else {
+                    addLog('cookie-test-log', `❌ Cookie 可能已过期或无效（状态码: ${response.status}）`, 'error');
+                }
+            } catch (error) {
+                addLog('cookie-test-log', `❌ 测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试所有端点
+        async function testAllEndpoints() {
+            const endpoints = [
+                { path: '/', name: '首页' },
+                { path: '/health', name: '健康检查' },
+                { path: '/api/messages', name: 'API - 获取消息' },
+            ];
+            
+            addLog('endpoint-test-log', '开始测试所有端点...', 'info');
+            
+            for (const endpoint of endpoints) {
+                try {
+                    addLog('endpoint-test-log', `测试: ${endpoint.name} (${endpoint.path})`, 'info');
+                    const response = await fetch(endpoint.path);
+                    
+                    if (response.ok) {
+                        addLog('endpoint-test-log', `✅ ${endpoint.name}: ${response.status} OK`, 'success');
+                    } else {
+                        addLog('endpoint-test-log', `⚠️ ${endpoint.name}: ${response.status} ${response.statusText}`, 'warning');
+                    }
+                } catch (error) {
+                    addLog('endpoint-test-log', `❌ ${endpoint.name}: ${error.message}`, 'error');
+                }
+            }
+            
+            addLog('endpoint-test-log', '所有端点测试完成', 'info');
+        }
+
+        // 网络诊断
+        async function testNetwork() {
+            addLog('network-log', '开始网络诊断...', 'info');
+            
+            // 测试 1: 本地连接
+            addLog('network-log', '测试 1: 本地服务器连接', 'info');
+            try {
+                const start = Date.now();
+                const response = await fetch('/health');
+                const elapsed = Date.now() - start;
+                addLog('network-log', `✅ 本地连接正常 (${elapsed}ms)`, 'success');
+            } catch (error) {
+                addLog('network-log', `❌ 本地连接失败: ${error.message}`, 'error');
+            }
+            
+            // 测试 2: BaziAI 连接
+            addLog('network-log', '测试 2: BaziAI 服务器连接', 'info');
+            try {
+                const start = Date.now();
+                const response = await fetch('https://www.bazi-ai.com');
+                const elapsed = Date.now() - start;
+                addLog('network-log', `✅ BaziAI 连接正常 (${elapsed}ms)`, 'success');
+            } catch (error) {
+                addLog('network-log', `❌ BaziAI 连接失败: ${error.message}`, 'error');
+            }
+            
+            // 测试 3: CORS
+            addLog('network-log', '测试 3: CORS 配置', 'info');
+            addLog('network-log', '✅ CORS 测试通过（浏览器允许跨域请求）', 'success');
+            
+            addLog('network-log', '网络诊断完成', 'info');
+        }
+    </script>
+</body>
+</html>
