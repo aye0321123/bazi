@@ -109,6 +109,8 @@ class BaziAIClient:
         url = f"{BASE_URL}/api/chat-session/{self.session_id}/messages"
         
         print(f"[DEBUG] 请求 URL: {url}")
+        print(f"[DEBUG] Cookie 长度: {len(self.cookie)}")
+        print(f"[DEBUG] Session ID: {self.session_id}")
         
         try:
             # 使用 session 发送请求，带重试机制
@@ -120,6 +122,7 @@ class BaziAIClient:
             )
             
             print(f"[DEBUG] 响应状态码: {response.status_code}")
+            print(f"[DEBUG] 响应头: {dict(response.headers)}")
             print(f"[DEBUG] 响应内容长度: {len(response.content)}")
             
             response.raise_for_status()
@@ -130,14 +133,21 @@ class BaziAIClient:
             return {"success": True, "data": data}
                 
         except requests.exceptions.SSLError as e:
-            print(f"[DEBUG] SSL 错误: {e}")
-            return {"success": False, "error": f"SSL 连接错误，请检查网络设置"}
+            error_msg = f"SSL 连接错误: {str(e)}"
+            print(f"[DEBUG] {error_msg}")
+            return {"success": False, "error": error_msg}
         except requests.exceptions.Timeout:
-            print(f"[DEBUG] 请求超时")
-            return {"success": False, "error": "请求超时，请检查网络连接"}
+            error_msg = "请求超时（30秒），BaziAI 服务器可能无法访问"
+            print(f"[DEBUG] {error_msg}")
+            return {"success": False, "error": error_msg}
+        except requests.exceptions.ConnectionError as e:
+            error_msg = f"连接错误: {str(e)}"
+            print(f"[DEBUG] {error_msg}")
+            return {"success": False, "error": error_msg}
         except requests.exceptions.JSONDecodeError as e:
-            print(f"[DEBUG] JSON 解析失败: {e}")
-            return {"success": False, "error": f"JSON 解析失败: {str(e)}"}
+            error_msg = f"JSON 解析失败: {str(e)}"
+            print(f"[DEBUG] {error_msg}")
+            return {"success": False, "error": error_msg}
         except requests.exceptions.RequestException as e:
             error_msg = str(e)
             if hasattr(e, 'response') and e.response is not None:
@@ -145,10 +155,11 @@ class BaziAIClient:
             print(f"[DEBUG] 请求异常: {error_msg}")
             return {"success": False, "error": error_msg}
         except Exception as e:
-            print(f"[DEBUG] 未知错误: {e}")
+            error_msg = f"未知错误: {str(e)}"
+            print(f"[DEBUG] {error_msg}")
             import traceback
             traceback.print_exc()
-            return {"success": False, "error": f"未知错误: {str(e)}"}
+            return {"success": False, "error": error_msg}
     
     def create_new_session(self):
         """创建新的聊天会话"""
@@ -375,6 +386,71 @@ def create_and_send():
 def health():
     """健康检查"""
     return jsonify({"status": "ok", "timestamp": datetime.now().isoformat()})
+
+
+@app.route('/api/test-connection', methods=['GET'])
+def test_connection():
+    """测试与 BaziAI 的连接"""
+    import socket
+    
+    results = {
+        "timestamp": datetime.now().isoformat(),
+        "tests": []
+    }
+    
+    # 测试 1: DNS 解析
+    try:
+        ip = socket.gethostbyname("www.bazi-ai.com")
+        results["tests"].append({
+            "name": "DNS 解析",
+            "success": True,
+            "message": f"成功解析到 IP: {ip}"
+        })
+    except Exception as e:
+        results["tests"].append({
+            "name": "DNS 解析",
+            "success": False,
+            "message": f"DNS 解析失败: {str(e)}"
+        })
+    
+    # 测试 2: HTTP 连接
+    try:
+        response = requests.get("https://www.bazi-ai.com", timeout=10)
+        results["tests"].append({
+            "name": "HTTP 连接",
+            "success": True,
+            "message": f"成功连接，状态码: {response.status_code}"
+        })
+    except requests.exceptions.Timeout:
+        results["tests"].append({
+            "name": "HTTP 连接",
+            "success": False,
+            "message": "连接超时（10秒）"
+        })
+    except Exception as e:
+        results["tests"].append({
+            "name": "HTTP 连接",
+            "success": False,
+            "message": f"连接失败: {str(e)}"
+        })
+    
+    # 测试 3: API 端点
+    try:
+        test_url = f"{BASE_URL}/api/chat-session/test/messages"
+        response = requests.get(test_url, timeout=10)
+        results["tests"].append({
+            "name": "API 端点",
+            "success": True,
+            "message": f"API 可访问，状态码: {response.status_code}"
+        })
+    except Exception as e:
+        results["tests"].append({
+            "name": "API 端点",
+            "success": False,
+            "message": f"API 访问失败: {str(e)}"
+        })
+    
+    return jsonify(results)
 
 
 if __name__ == '__main__':
