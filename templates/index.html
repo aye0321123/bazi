@@ -515,9 +515,17 @@
 
                 <div class="input-container">
                     <textarea id="message-input" placeholder="请输入您的问题，天机阁为您解惑..."></textarea>
-                    <button class="btn" onclick="sendMessage()">
-                        <span id="send-btn-text">📤 发送</span>
-                    </button>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button class="btn" onclick="sendMessage()">
+                            <span id="send-btn-text">📤 快速发送</span>
+                        </button>
+                        <button class="btn" onclick="sendAndWait()" style="background: linear-gradient(135deg, #c9b037 0%, #ffd700 50%, #c9b037 100%); color: #8b0000;">
+                            <span id="send-wait-btn-text">🤖 自动获取回复（推荐）</span>
+                        </button>
+                        <button class="btn" onclick="sendAndOpenInBrowser()" style="background: linear-gradient(135deg, #4a90e2 0%, #5ca3f5 50%, #4a90e2 100%); color: #fff;">
+                            <span id="send-open-btn-text">🌐 在官网查看</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -717,7 +725,180 @@
                 showAlert('网络错误: ' + error.message, 'error');
                 addDebugLog(`发送错误: ${error.message}`, 'error');
             } finally {
-                btn.textContent = '📤 发送';
+                btn.textContent = '📤 快速发送';
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
+        // 发送消息并等待回复（使用 Selenium 后台触发）
+        async function sendAndWait() {
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+
+            if (!content) {
+                showAlert('请输入消息内容', 'error');
+                return;
+            }
+
+            addDebugLog(`发送消息并等待回复（Selenium 模式）: ${content.substring(0, 50)}...`, 'info');
+
+            const btn = document.getElementById('send-wait-btn-text');
+            const originalText = btn.textContent;
+            btn.innerHTML = '<span class="loading"></span> 创建会话...';
+            input.disabled = true;
+
+            try {
+                // 先显示用户消息
+                const container = document.getElementById('messages-container');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message user';
+                messageDiv.innerHTML = `
+                    <div class="message-role">👤 您</div>
+                    <div class="message-content">${escapeHtml(content)}</div>
+                    <div class="message-time">${new Date().toLocaleString('zh-CN')}</div>
+                `;
+                container.appendChild(messageDiv);
+                container.scrollTop = container.scrollHeight;
+                
+                // 添加等待提示
+                const waitingDiv = document.createElement('div');
+                waitingDiv.className = 'message assistant';
+                waitingDiv.id = 'waiting-message';
+                waitingDiv.innerHTML = `
+                    <div class="message-role">🤖 AI</div>
+                    <div class="message-content">
+                        <span class="loading"></span> 正在后台触发 AI 生成回复，请稍候...<br>
+                        <small style="opacity: 0.7;">使用 Selenium 自动化技术，无需跳转到官网</small>
+                    </div>
+                `;
+                container.appendChild(waitingDiv);
+                container.scrollTop = container.scrollHeight;
+                
+                input.value = '';
+                btn.innerHTML = '<span class="loading"></span> 后台触发 AI...';
+                
+                addDebugLog('创建新会话并使用 Selenium 触发 AI...', 'info');
+
+                const response = await fetch('/api/send-and-wait', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        content: content,
+                        use_selenium: true,  // 使用 Selenium
+                        max_wait: 30,
+                        check_interval: 2
+                    })
+                });
+
+                const result = await response.json();
+                addDebugLog(`响应: ${JSON.stringify(result)}`, result.success ? 'success' : 'warning');
+
+                // 移除等待提示
+                const waiting = document.getElementById('waiting-message');
+                if (waiting) waiting.remove();
+
+                if (result.success && result.ai_reply) {
+                    showAlert(`✅ 成功获取 AI 回复！（等待: ${result.wait_time}秒，方法: ${result.method}）`, 'success');
+                    
+                    if (result.new_session_id) {
+                        addDebugLog(`新会话 ID: ${result.new_session_id}`, 'success');
+                    }
+                    
+                    // 显示 AI 回复
+                    const aiDiv = document.createElement('div');
+                    aiDiv.className = 'message assistant';
+                    const time = new Date(result.ai_reply.created_at).toLocaleString('zh-CN');
+                    aiDiv.innerHTML = `
+                        <div class="message-role">🤖 AI</div>
+                        <div class="message-content">${escapeHtml(result.ai_reply.content)}</div>
+                        <div class="message-time">${time}</div>
+                    `;
+                    container.appendChild(aiDiv);
+                    container.scrollTop = container.scrollHeight;
+                    
+                    // 刷新消息列表
+                    setTimeout(() => {
+                        loadMessages();
+                    }, 1000);
+                } else {
+                    showAlert(result.error || '未能获取到 AI 回复', 'error');
+                    
+                    if (result.suggestion) {
+                        showAlert(result.suggestion, 'info');
+                    }
+                    
+                    // 刷新消息列表
+                    setTimeout(() => {
+                        loadMessages();
+                    }, 2000);
+                }
+            } catch (error) {
+                showAlert('网络错误: ' + error.message, 'error');
+                addDebugLog(`错误: ${error.message}`, 'error');
+                
+                // 移除等待提示
+                const waiting = document.getElementById('waiting-message');
+                if (waiting) waiting.remove();
+            } finally {
+                btn.textContent = originalText;
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
+        // 发送并在官网打开（推荐）
+        async function sendAndOpenInBrowser() {
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+
+            if (!content) {
+                showAlert('请输入消息内容', 'error');
+                return;
+            }
+
+            addDebugLog(`发送消息并在官网打开: ${content.substring(0, 50)}...`, 'info');
+
+            const btn = document.getElementById('send-open-btn-text');
+            const originalText = btn.textContent;
+            btn.innerHTML = '<span class="loading"></span> 创建会话...';
+            input.disabled = true;
+
+            try {
+                const response = await fetch('/api/create-and-send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: content })
+                });
+
+                const result = await response.json();
+                addDebugLog(`创建并发送响应: ${JSON.stringify(result)}`, result.success ? 'success' : 'error');
+
+                if (result.success) {
+                    input.value = '';
+                    showAlert('✅ 消息已发送！正在打开官网...', 'success');
+                    
+                    // 在新标签页打开
+                    window.open(result.chat_url, '_blank');
+                    
+                    // 显示提示
+                    setTimeout(() => {
+                        showAlert('💡 已在新标签页打开 BaziAI 官网，AI 将在页面上生成回复', 'info');
+                        showAlert('查看回复后，可返回这里点击"刷新"按钮更新消息列表', 'info');
+                    }, 1000);
+                    
+                    // 自动刷新消息列表
+                    setTimeout(() => {
+                        loadMessages();
+                    }, 3000);
+                } else {
+                    showAlert(result.error || '发送失败', 'error');
+                }
+            } catch (error) {
+                showAlert('网络错误: ' + error.message, 'error');
+                addDebugLog(`发送错误: ${error.message}`, 'error');
+            } finally {
+                btn.textContent = originalText;
                 input.disabled = false;
                 input.focus();
             }

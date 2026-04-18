@@ -6,16 +6,24 @@ BaziAI Web 应用
 """
 
 from flask import Flask, render_template, request, jsonify, session
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+import urllib3
 import json
 import os
 from datetime import datetime
 import secrets
-import urllib3
+import ssl
 
-# 禁用 SSL 警告（仅用于调试）
+# Selenium 相关导入
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service
+    from webdriver_manager.chrome import ChromeDriverManager
+    SELENIUM_AVAILABLE = True
+except ImportError:
+    SELENIUM_AVAILABLE = False
+
+# 禁用 SSL 警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
@@ -24,24 +32,18 @@ app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 # 配置
 BASE_URL = "https://www.bazi-ai.com"
 
-# 创建一个带重试机制的 session
-def create_session():
-    """创建带重试机制的 requests session"""
-    session = requests.Session()
-    
-    # 配置重试策略
-    retry_strategy = Retry(
-        total=3,
-        backoff_factor=1,
-        status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"]
-    )
-    
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
-    
-    return session
+# 创建自定义的 SSL 上下文
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+
+# 创建全局 HTTP 客户端
+http_client = urllib3.PoolManager(
+    ssl_context=ctx,
+    cert_reqs='CERT_NONE',
+    assert_hostname=False,
+    timeout=urllib3.Timeout(connect=10.0, read=30.0)
+)
 
 class BaziAIClient:
     """BaziAI 客户端类"""
@@ -49,7 +51,6 @@ class BaziAIClient:
     def __init__(self, session_id, cookie):
         self.session_id = session_id
         self.cookie = cookie
-        self.session = create_session()
         self.headers = {
             "Accept": "*/*",
             "Accept-Encoding": "gzip, deflate, br",
@@ -72,37 +73,24 @@ class BaziAIClient:
         }
         
         try:
-            # 使用 session 发送请求，带重试机制
-            response = self.session.post(
-                url, 
-                headers=self.headers, 
-                json=payload, 
-                timeout=30,
-                verify=True
+            response = http_client.request(
+                'POST',
+                url,
+                headers=self.headers,
+                body=json.dumps(payload).encode('utf-8')
             )
-            response.raise_for_status()
             
-            # 直接使用 response.json()，requests 会自动处理压缩
-            data = response.json()
-            return {"success": True, "data": data}
+            if response.status == 200:
+                data = json.loads(response.data.decode('utf-8'))
+                return {"success": True, "data": data}
+            else:
+                return {"success": False, "error": f"状态码: {response.status}"}
                 
-        except requests.exceptions.SSLError as e:
-            print(f"[DEBUG] SSL 错误: {e}")
-            return {"success": False, "error": f"SSL 连接错误，请检查网络设置"}
-        except requests.exceptions.Timeout:
-            return {"success": False, "error": "请求超时，请检查网络连接"}
-        except requests.exceptions.JSONDecodeError as e:
-            return {"success": False, "error": f"JSON 解析失败: {str(e)}"}
-        except requests.exceptions.RequestException as e:
-            error_msg = str(e)
-            if hasattr(e, 'response') and e.response is not None:
-                error_msg += f" (状态码: {e.response.status_code})"
-            return {"success": False, "error": error_msg}
         except Exception as e:
-            print(f"[DEBUG] 未知错误: {e}")
+            print(f"[DEBUG] 发送消息错误: {e}")
             import traceback
             traceback.print_exc()
-            return {"success": False, "error": f"未知错误: {str(e)}"}
+            return {"success": False, "error": f"请求失败: {str(e)}"}
     
     def get_messages(self):
         """获取消息列表"""
@@ -113,49 +101,26 @@ class BaziAIClient:
         print(f"[DEBUG] Session ID: {self.session_id}")
         
         try:
-            # 使用 session 发送请求，带重试机制
-            response = self.session.get(
-                url, 
-                headers=self.headers, 
-                timeout=30,
-                verify=True  # 验证 SSL 证书
+            response = http_client.request(
+                'GET',
+                url,
+                headers=self.headers
             )
             
-            print(f"[DEBUG] 响应状态码: {response.status_code}")
-            print(f"[DEBUG] 响应头: {dict(response.headers)}")
-            print(f"[DEBUG] 响应内容长度: {len(response.content)}")
+            print(f"[DEBUG] 响应状态码: {response.status}")
+            print(f"[DEBUG] 响应内容长度: {len(response.data)}")
             
-            response.raise_for_status()
-            
-            # 直接使用 response.json()，requests 会自动处理压缩
-            data = response.json()
-            print(f"[DEBUG] JSON 解析成功，消息数量: {len(data) if isinstance(data, list) else 'N/A'}")
-            return {"success": True, "data": data}
+            if response.status == 200:
+                data = json.loads(response.data.decode('utf-8'))
+                print(f"[DEBUG] JSON 解析成功，消息数量: {len(data) if isinstance(data, list) else 'N/A'}")
+                return {"success": True, "data": data}
+            else:
+                error_msg = f"状态码: {response.status}"
+                print(f"[DEBUG] 请求失败: {error_msg}")
+                return {"success": False, "error": error_msg}
                 
-        except requests.exceptions.SSLError as e:
-            error_msg = f"SSL 连接错误: {str(e)}"
-            print(f"[DEBUG] {error_msg}")
-            return {"success": False, "error": error_msg}
-        except requests.exceptions.Timeout:
-            error_msg = "请求超时（30秒），BaziAI 服务器可能无法访问"
-            print(f"[DEBUG] {error_msg}")
-            return {"success": False, "error": error_msg}
-        except requests.exceptions.ConnectionError as e:
-            error_msg = f"连接错误: {str(e)}"
-            print(f"[DEBUG] {error_msg}")
-            return {"success": False, "error": error_msg}
-        except requests.exceptions.JSONDecodeError as e:
-            error_msg = f"JSON 解析失败: {str(e)}"
-            print(f"[DEBUG] {error_msg}")
-            return {"success": False, "error": error_msg}
-        except requests.exceptions.RequestException as e:
-            error_msg = str(e)
-            if hasattr(e, 'response') and e.response is not None:
-                error_msg += f" (状态码: {e.response.status_code})"
-            print(f"[DEBUG] 请求异常: {error_msg}")
-            return {"success": False, "error": error_msg}
         except Exception as e:
-            error_msg = f"未知错误: {str(e)}"
+            error_msg = f"请求失败: {str(e)}"
             print(f"[DEBUG] {error_msg}")
             import traceback
             traceback.print_exc()
@@ -172,29 +137,30 @@ class BaziAIClient:
         print(f"[DEBUG] 创建新会话 URL: {url}")
         
         try:
-            response = self.session.post(
+            response = http_client.request(
+                'POST',
                 url,
                 headers=headers,
-                json={},
-                timeout=30,
-                verify=True
+                body=json.dumps({}).encode('utf-8')
             )
             
-            print(f"[DEBUG] 响应状态码: {response.status_code}")
-            response.raise_for_status()
+            print(f"[DEBUG] 响应状态码: {response.status}")
             
-            data = response.json()
-            print(f"[DEBUG] 新会话创建成功: {data}")
-            
-            if data.get('code') == 0:
-                new_session_id = data['data']['uuid']
-                return {
-                    "success": True, 
-                    "session_id": new_session_id,
-                    "data": data['data']
-                }
+            if response.status == 200:
+                data = json.loads(response.data.decode('utf-8'))
+                print(f"[DEBUG] 新会话创建成功: {data}")
+                
+                if data.get('code') == 0:
+                    new_session_id = data['data']['uuid']
+                    return {
+                        "success": True, 
+                        "session_id": new_session_id,
+                        "data": data['data']
+                    }
+                else:
+                    return {"success": False, "error": data.get('message', '创建失败')}
             else:
-                return {"success": False, "error": data.get('message', '创建失败')}
+                return {"success": False, "error": f"状态码: {response.status}"}
                 
         except Exception as e:
             print(f"[DEBUG] 创建会话失败: {e}")
@@ -219,9 +185,16 @@ def index():
             <p>错误: {str(e)}</p>
             <p><a href="/health">健康检查</a></p>
             <p><a href="/test">测试页面</a></p>
+            <p><a href="/chat">聊天记录</a></p>
         </body>
         </html>
         """, 200
+
+
+@app.route('/chat')
+def chat():
+    """聊天记录页面"""
+    return render_template('chat.html')
 
 
 @app.route('/test')
@@ -288,6 +261,174 @@ def send_message():
     result = client.send_message(content)
     
     return jsonify(result)
+
+
+def trigger_ai_with_selenium(session_id, cookie_str):
+    """使用 Selenium 后台触发 AI（无头模式）"""
+    if not SELENIUM_AVAILABLE:
+        print(f"[DEBUG] ❌ Selenium 未安装")
+        return {"success": False, "error": "Selenium 未安装"}
+    
+    try:
+        import time
+        
+        print(f"[DEBUG] 使用 Selenium 触发 AI...")
+        
+        # 配置 Chrome 选项（无头模式）
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')  # 无头模式，不显示浏览器
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--window-size=1920,1080')
+        
+        # 使用 webdriver-manager 自动管理 ChromeDriver
+        driver = webdriver.Chrome(
+            service=Service(ChromeDriverManager().install()),
+            options=chrome_options
+        )
+        
+        try:
+            # 访问主页设置 Cookie
+            driver.get(BASE_URL)
+            time.sleep(1)
+            
+            # 解析并添加 Cookie
+            for cookie_pair in cookie_str.split('; '):
+                if '=' in cookie_pair:
+                    name, value = cookie_pair.split('=', 1)
+                    try:
+                        driver.add_cookie({
+                            'name': name,
+                            'value': value,
+                            'domain': '.bazi-ai.com'
+                        })
+                    except:
+                        pass  # 忽略无效的 Cookie
+            
+            # 访问聊天页面
+            chat_url = f"{BASE_URL}/zh/chat/{session_id}"
+            print(f"[DEBUG] 访问页面: {chat_url}")
+            driver.get(chat_url)
+            
+            # 等待页面加载和 AI 生成
+            print(f"[DEBUG] 等待 AI 生成回复...")
+            time.sleep(10)  # 等待 10 秒让 AI 生成
+            
+            print(f"[DEBUG] ✅ Selenium 触发完成")
+            return {"success": True}
+            
+        finally:
+            driver.quit()
+            
+    except Exception as e:
+        print(f"[DEBUG] ❌ Selenium 错误: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+
+@app.route('/api/send-and-wait', methods=['POST'])
+def send_and_wait():
+    """发送消息并等待 AI 回复（使用 Selenium 触发）"""
+    if 'cookie' not in session:
+        return jsonify({"success": False, "error": "未登录"})
+    
+    data = request.json
+    content = data.get('content', '').strip()
+    use_selenium = data.get('use_selenium', True)  # 默认使用 Selenium
+    max_wait = data.get('max_wait', 30)  # 默认等待30秒
+    check_interval = data.get('check_interval', 2)  # 默认2秒检查一次
+    
+    if not content:
+        return jsonify({"success": False, "error": "消息内容不能为空"})
+    
+    # 步骤1: 创建新会话
+    print("[DEBUG] 创建新会话...")
+    temp_client = BaziAIClient("temp", session['cookie'])
+    create_result = temp_client.create_new_session()
+    
+    if not create_result['success']:
+        return jsonify({
+            "success": False, 
+            "error": f"创建新会话失败: {create_result.get('error')}"
+        })
+    
+    new_session_id = create_result['session_id']
+    print(f"[DEBUG] 新会话创建成功: {new_session_id}")
+    
+    # 使用新会话
+    client = BaziAIClient(new_session_id, session['cookie'])
+    session['session_id'] = new_session_id
+    
+    # 步骤2: 获取当前消息数
+    messages_result = client.get_messages()
+    if not messages_result['success']:
+        return jsonify({"success": False, "error": "无法获取消息列表"})
+    
+    initial_count = len(messages_result['data'])
+    
+    # 步骤3: 发送消息
+    send_result = client.send_message(content)
+    if not send_result['success']:
+        return jsonify(send_result)
+    
+    print(f"[DEBUG] 消息已发送")
+    
+    # 步骤4: 使用 Selenium 触发 AI（如果启用）
+    if use_selenium:
+        selenium_result = trigger_ai_with_selenium(new_session_id, session['cookie'])
+        if not selenium_result['success']:
+            print(f"[DEBUG] Selenium 失败，将使用纯轮询模式")
+    
+    # 步骤5: 轮询等待 AI 回复
+    print(f"[DEBUG] 开始轮询检查 AI 回复...")
+    import time
+    start_time = time.time()
+    attempts = 0
+    
+    while time.time() - start_time < max_wait:
+        attempts += 1
+        time.sleep(check_interval)
+        
+        # 获取最新消息
+        messages_result = client.get_messages()
+        if messages_result['success']:
+            messages = messages_result['data']
+            current_count = len(messages)
+            
+            print(f"[DEBUG] 尝试 {attempts}: 消息数 {current_count} (初始: {initial_count})")
+            
+            # 检查是否有新的 assistant 消息
+            if current_count > initial_count + 1:
+                new_messages = messages[initial_count:]
+                
+                for msg in new_messages:
+                    if msg.get('role') == 'assistant':
+                        elapsed = int(time.time() - start_time)
+                        print(f"[DEBUG] ✅ 收到 AI 回复！等待时间: {elapsed}秒")
+                        return jsonify({
+                            "success": True,
+                            "user_message": send_result['data'],
+                            "ai_reply": msg,
+                            "wait_time": elapsed,
+                            "attempts": attempts,
+                            "new_session_id": new_session_id,
+                            "method": "selenium" if use_selenium else "polling"
+                        })
+    
+    # 超时未收到回复
+    elapsed = int(time.time() - start_time)
+    print(f"[DEBUG] ⏰ 等待超时: {elapsed}秒")
+    return jsonify({
+        "success": False,
+        "error": "等待超时，AI 未回复",
+        "user_message": send_result['data'],
+        "wait_time": elapsed,
+        "attempts": attempts,
+        "new_session_id": new_session_id,
+        "suggestion": "AI 可能需要更长时间生成回复，请稍后刷新查看"
+    })
 
 
 @app.route('/api/messages', methods=['GET'])
@@ -415,17 +556,11 @@ def test_connection():
     
     # 测试 2: HTTP 连接
     try:
-        response = requests.get("https://www.bazi-ai.com", timeout=10)
+        response = http_client.request('GET', "https://www.bazi-ai.com", timeout=10.0)
         results["tests"].append({
             "name": "HTTP 连接",
             "success": True,
-            "message": f"成功连接，状态码: {response.status_code}"
-        })
-    except requests.exceptions.Timeout:
-        results["tests"].append({
-            "name": "HTTP 连接",
-            "success": False,
-            "message": "连接超时（10秒）"
+            "message": f"成功连接，状态码: {response.status}"
         })
     except Exception as e:
         results["tests"].append({
@@ -437,11 +572,11 @@ def test_connection():
     # 测试 3: API 端点
     try:
         test_url = f"{BASE_URL}/api/chat-session/test/messages"
-        response = requests.get(test_url, timeout=10)
+        response = http_client.request('GET', test_url, timeout=10.0)
         results["tests"].append({
             "name": "API 端点",
             "success": True,
-            "message": f"API 可访问，状态码: {response.status_code}"
+            "message": f"API 可访问，状态码: {response.status}"
         })
     except Exception as e:
         results["tests"].append({

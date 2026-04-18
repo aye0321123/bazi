@@ -1,97 +1,105 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-检查 AI 回复
+检查 AI 回复功能
+快速测试脚本
 """
 
-import requests
+import urllib3
 import json
-import time
+import ssl
 
-def check_messages():
-    """检查消息列表"""
-    
-    print("="*60)
-    print("🔍 检查消息列表")
-    print("="*60)
-    print()
-    
-    # 读取凭证
-    with open('bazi_credentials.json', 'r', encoding='utf-8') as f:
-        creds = json.load(f)
-    
-    session_id = "26a7d080-283c-43c9-a741-23d8dfcb8512"
+# 禁用警告
+urllib3.disable_warnings()
+
+# 创建 SSL 上下文
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+
+http = urllib3.PoolManager(
+    ssl_context=ctx,
+    cert_reqs='CERT_NONE',
+    assert_hostname=False
+)
+
+# 读取 Cookie
+with open('bazi_credentials.json', 'r', encoding='utf-8') as f:
+    creds = json.load(f)
     cookie = creds['cookie']
-    
+
+session_id = "26a7d080-283c-43c9-a741-23d8dfcb8512"
+base_url = "https://www.bazi-ai.com"
+
+def get_messages():
+    """获取消息列表"""
+    url = f"{base_url}/api/chat-session/{session_id}/messages"
     headers = {
-        "Cookie": cookie,
-        "Content-Type": "application/json",
         "Accept": "*/*",
-        "Origin": "https://www.bazi-ai.com",
-        "Referer": f"https://www.bazi-ai.com/zh/chat/{session_id}",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cookie": cookie,
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
     
-    url = f"https://www.bazi-ai.com/api/chat-session/{session_id}/messages"
-    
     try:
-        response = requests.get(url, headers=headers, timeout=30)
-        messages = response.json()
-        
-        print(f"✅ 共有 {len(messages)} 条消息")
-        print()
-        
-        # 统计消息类型
-        user_messages = [msg for msg in messages if msg.get('role') == 'user']
-        ai_messages = [msg for msg in messages if msg.get('role') == 'assistant']
-        
-        print(f"📊 消息统计:")
-        print(f"   👤 用户消息: {len(user_messages)} 条")
-        print(f"   🤖 AI 回复: {len(ai_messages)} 条")
-        print()
-        
-        if ai_messages:
-            print("🤖 AI 回复列表:")
-            print("-" * 60)
-            for i, msg in enumerate(ai_messages, 1):
-                content = msg.get('content', '')
-                created_at = msg.get('created_at', '')
-                print(f"\n{i}. [{created_at}]")
-                print(f"{content[:200]}")
-                if len(content) > 200:
-                    print(f"... (还有 {len(content) - 200} 字符)")
-                print()
+        response = http.request('GET', url, headers=headers)
+        if response.status == 200:
+            messages = json.loads(response.data.decode('utf-8'))
+            return {"success": True, "data": messages}
         else:
-            print("⚠️  没有找到 AI 回复")
-            print()
-            print("可能的原因:")
-            print("1. AI 还在生成回复（需要等待）")
-            print("2. BaziAI 使用 WebSocket 推送回复（需要特殊处理）")
-            print("3. 需要在网页上才能看到回复")
-            print()
-        
-        # 显示最近的消息
-        print("📋 最近的 10 条消息:")
-        print("-" * 60)
-        for i, msg in enumerate(messages[-10:], 1):
-            role = "👤 用户" if msg.get('role') == 'user' else "🤖 AI"
-            content = msg.get('content', '')[:80]
-            created_at = msg.get('created_at', '')
-            print(f"{i}. {role} [{created_at}]")
-            print(f"   {content}...")
-            print()
-        
+            return {"success": False, "error": f"状态码: {response.status}"}
     except Exception as e:
-        print(f"❌ 请求失败: {e}")
-    
-    print("="*60)
-    print()
-    print("💡 建议:")
-    print("   1. 在浏览器中访问: https://www.bazi-ai.com/zh/chat/26a7d080-283c-43c9-a741-23d8dfcb8512")
-    print("   2. 查看是否有 AI 回复")
-    print("   3. 如果有回复，说明 API 可能有延迟")
-    print()
+        return {"success": False, "error": str(e)}
 
+def main():
+    print("=" * 80)
+    print("🔍 检查 BaziAI 消息状态")
+    print("=" * 80)
+    
+    result = get_messages()
+    
+    if not result['success']:
+        print(f"\n❌ 获取失败: {result['error']}")
+        return
+    
+    messages = result['data']
+    print(f"\n📊 总消息数: {len(messages)}")
+    
+    # 显示最近5条消息
+    print("\n📝 最近的消息:")
+    print("-" * 80)
+    
+    recent_messages = messages[-5:] if len(messages) > 5 else messages
+    
+    for i, msg in enumerate(recent_messages, 1):
+        role = "👤 用户" if msg['role'] == 'user' else "🤖 AI"
+        content = msg['content'][:100] + "..." if len(msg['content']) > 100 else msg['content']
+        time = msg.get('created_at', 'N/A')
+        
+        print(f"\n{i}. {role}")
+        print(f"   时间: {time}")
+        print(f"   内容: {content}")
+    
+    print("\n" + "=" * 80)
+    
+    # 统计
+    user_count = sum(1 for msg in messages if msg['role'] == 'user')
+    ai_count = sum(1 for msg in messages if msg['role'] == 'assistant')
+    
+    print(f"\n📈 统计信息:")
+    print(f"   用户消息: {user_count}")
+    print(f"   AI 回复: {ai_count}")
+    print(f"   回复率: {ai_count/user_count*100:.1f}%" if user_count > 0 else "   回复率: N/A")
+    
+    # 检查最后一条消息
+    if messages:
+        last_msg = messages[-1]
+        if last_msg['role'] == 'user':
+            print(f"\n⚠️  最后一条消息是用户消息，AI 可能还未回复")
+        else:
+            print(f"\n✅ 最后一条消息是 AI 回复")
+    
+    print("\n" + "=" * 80)
 
 if __name__ == "__main__":
-    check_messages()
+    main()

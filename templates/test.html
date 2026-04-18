@@ -464,15 +464,31 @@
                 addLog('network-log', `❌ 本地连接失败: ${error.message}`, 'error');
             }
             
-            // 测试 2: BaziAI 连接
-            addLog('network-log', '测试 2: BaziAI 服务器连接', 'info');
+            // 测试 2: 后端 API 连接
+            addLog('network-log', '测试 2: 后端 API 连接', 'info');
             try {
                 const start = Date.now();
-                const response = await fetch('https://www.bazi-ai.com');
+                const response = await fetch('/api/test-connection');
                 const elapsed = Date.now() - start;
-                addLog('network-log', `✅ BaziAI 连接正常 (${elapsed}ms)`, 'success');
+                const data = await response.json();
+                
+                let allSuccess = true;
+                for (const test of data.tests) {
+                    if (test.success) {
+                        addLog('network-log', `  ✅ ${test.name}: ${test.message}`, 'success');
+                    } else {
+                        addLog('network-log', `  ❌ ${test.name}: ${test.message}`, 'error');
+                        allSuccess = false;
+                    }
+                }
+                
+                if (allSuccess) {
+                    addLog('network-log', `✅ 后端可以访问 BaziAI (${elapsed}ms)`, 'success');
+                } else {
+                    addLog('network-log', `⚠️ 后端访问 BaziAI 有问题`, 'warning');
+                }
             } catch (error) {
-                addLog('network-log', `❌ BaziAI 连接失败: ${error.message}`, 'error');
+                addLog('network-log', `❌ 后端 API 测试失败: ${error.message}`, 'error');
             }
             
             // 测试 3: CORS

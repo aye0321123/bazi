@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天记录 - 天机阁</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1810 50%, #1a1a1a 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #faf8f3;
+            border-radius: 8px;
+            box-shadow: 0 0 0 2px #c9b037, 0 20px 60px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #8b0000 0%, #c8161d 50%, #8b0000 100%);
+            color: #ffd700;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .header p {
+            color: #f5f1e8;
+            font-size: 14px;
+        }
+
+        .controls {
+            padding: 20px;
+            background: #f5f1e8;
+            border-bottom: 2px solid #c9b037;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .controls input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 15px;
+            border: 2px solid #c9b037;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #8b0000, #c8161d);
+            color: #ffd700;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .controls button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 0, 0, 0.4);
+        }
+
+        .chat-container {
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-user {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message-assistant {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 15px 20px;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .message-user .message-content {
+            background: linear-gradient(135deg, #c8161d, #8b0000);
+            color: #ffd700;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-assistant .message-content {
+            background: white;
+            color: #333;
+            border: 2px solid #c9b037;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .message-icon {
+            font-size: 18px;
+        }
+
+        .message-text {
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8b0000;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            padding: 10px 20px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            margin: 20px;
+            border-radius: 4px;
+        }
+
+        /* Markdown 样式 */
+        .message-text h3 {
+            color: #8b0000;
+            margin: 15px 0 10px 0;
+            font-size: 16px;
+        }
+
+        .message-text h4 {
+            color: #c8161d;
+            margin: 12px 0 8px 0;
+            font-size: 14px;
+        }
+
+        .message-text ul, .message-text ol {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+
+        .message-text li {
+            margin: 5px 0;
+        }
+
+        .message-text blockquote {
+            border-left: 3px solid #c9b037;
+            padding-left: 15px;
+            margin: 10px 0;
+            font-style: italic;
+            color: #666;
+        }
+
+        .message-text strong {
+            color: #8b0000;
+            font-weight: 600;
+        }
+
+        .message-text hr {
+            border: none;
+            border-top: 1px solid #c9b037;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💬 聊天记录</h1>
+            <p>查看与 BaziAI 的完整对话</p>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="sessionInput" placeholder="输入 Session ID（可选）" value="26a7d080-283c-43c9-a741-23d8dfcb8512">
+            <button onclick="loadMessages()">🔄 刷新消息</button>
+            <button onclick="autoRefresh()">⏱️ 自动刷新</button>
+            <button onclick="clearChat()">🗑️ 清空显示</button>
+        </div>
+
+        <div id="status" class="status" style="display: none;"></div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="loading">正在加载聊天记录</div>
+        </div>
+    </div>
+
+    <script>
+        let autoRefreshInterval = null;
+
+        // 页面加载时自动获取消息
+        window.onload = function() {
+            loadMessages();
+        };
+
+        // 加载消息
+        async function loadMessages() {
+            const container = document.getElementById('chatContainer');
+            const statusDiv = document.getElementById('status');
+            
+            container.innerHTML = '<div class="loading">正在加载聊天记录</div>';
+            statusDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/messages');
+                const result = await response.json();
+
+                if (result.success) {
+                    const messages = result.data;
+                    
+                    if (messages.length === 0) {
+                        container.innerHTML = `
+                            <div class="empty">
+                                <div class="empty-icon">📭</div>
+                                <p>暂无聊天记录</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    container.innerHTML = '';
+                    
+                    messages.forEach(msg => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = `message message-${msg.role}`;
+                        
+                        const role = msg.role === 'user' ? '👤 用户' : '🤖 BaziAI';
+                        const time = msg.created_at ? new Date(msg.created_at).toLocaleString('zh-CN') : '';
+                        
+                        messageDiv.innerHTML = `
+                            <div class="message-content">
+                                <div class="message-header">
+                                    <span class="message-icon">${msg.role === 'user' ? '👤' : '🤖'}</span>
+                                    <strong>${role}</strong>
+                                </div>
+                                <div class="message-text">${formatMessage(msg.content)}</div>
+                                ${time ? `<div class="message-time">${time}</div>` : ''}
+                            </div>
+                        `;
+                        
+                        container.appendChild(messageDiv);
+                    });
+
+                    // 滚动到底部
+                    container.scrollTop = container.scrollHeight;
+
+                    // 显示状态
+                    statusDiv.textContent = `✅ 成功加载 ${messages.length} 条消息 - ${new Date().toLocaleTimeString()}`;
+                    statusDiv.style.display = 'block';
+                    
+                } else {
+                    container.innerHTML = `
+                        <div class="empty">
+                            <div class="empty-icon">❌</div>
+                            <p>加载失败: ${result.error}</p>
+                            <p style="margin-top: 10px; font-size: 12px;">请确保已登录并设置了 Cookie</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="empty">
+                        <div class="empty-icon">⚠️</div>
+                        <p>请求失败: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 格式化消息（简单的 Markdown 支持）
+        function formatMessage(text) {
+            if (!text) return '';
+            
+            // 转义 HTML
+            text = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            // Markdown 标题
+            text = text.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            text = text.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+            
+            // 粗体
+            text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            
+            // 引用
+            text = text.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+            
+            // 分隔线
+            text = text.replace(/^---$/gm, '<hr>');
+            
+            // 列表项
+            text = text.replace(/^- (.+)$/gm, '<li>$1</li>');
+            text = text.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+            
+            return text;
+        }
+
+        // 自动刷新
+        function autoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                alert('✅ 已停止自动刷新');
+            } else {
+                autoRefreshInterval = setInterval(loadMessages, 5000); // 每5秒刷新
+                alert('✅ 已开启自动刷新（每5秒）');
+                loadMessages();
+            }
+        }
+
+        // 清空显示
+        function clearChat() {
+            if (confirm('确定要清空显示吗？（不会删除实际数据）')) {
+                document.getElementById('chatContainer').innerHTML = `
+                    <div class="empty">
+                        <div class="empty-icon">🧹</div>
+                        <p>显示已清空</p>
+                        <p style="margin-top: 10px;"><button onclick="loadMessages()" style="padding: 8px 16px; cursor: pointer;">重新加载</button></p>
+                    </div>
+                `;
+            }
+        }
+
+        // 页面卸载时清除定时器
+        window.onbeforeunload = function() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        };
+    </script>
+</body>
+</html>
