@@ -269,19 +269,26 @@ def send_message():
 
 
 def trigger_ai_with_selenium(session_id, cookie_str):
-    """使用 Selenium 后台触发 AI（无头模式）"""
+    """使用 Selenium 后台触发 AI（包含自动登录）"""
     if not SELENIUM_AVAILABLE:
         print(f"[DEBUG] ❌ Selenium 未安装")
         return {"success": False, "error": "Selenium 未安装"}
     
     try:
         import time
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
         
-        print(f"[DEBUG] 使用 Selenium 触发 AI...")
+        print(f"[DEBUG] 使用 Selenium 触发 AI（包含自动登录）...")
         
-        # 配置 Chrome 选项（无头模式）
+        # 用户凭据
+        EMAIL = "291568499@qq.com"
+        PASSWORD = "hzy020618"
+        
+        # 配置 Chrome 选项（显示浏览器，方便调试）
         chrome_options = Options()
-        chrome_options.add_argument('--headless')  # 无头模式，不显示浏览器
+        # chrome_options.add_argument('--headless')  # 暂时不使用无头模式
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
@@ -294,11 +301,13 @@ def trigger_ai_with_selenium(session_id, cookie_str):
         )
         
         try:
-            # 访问主页设置 Cookie
+            # 步骤 1: 访问主页设置 Cookie
+            print(f"[DEBUG] 访问主页...")
             driver.get(BASE_URL)
-            time.sleep(1)
+            time.sleep(2)
             
-            # 解析并添加 Cookie
+            # 步骤 2: 添加 Cookie
+            print(f"[DEBUG] 添加 Cookie...")
             for cookie_pair in cookie_str.split('; '):
                 if '=' in cookie_pair:
                     name, value = cookie_pair.split('=', 1)
@@ -309,16 +318,61 @@ def trigger_ai_with_selenium(session_id, cookie_str):
                             'domain': '.bazi-ai.com'
                         })
                     except:
-                        pass  # 忽略无效的 Cookie
+                        pass
             
-            # 访问聊天页面
+            # 步骤 3: 刷新页面
+            print(f"[DEBUG] 刷新页面...")
+            driver.refresh()
+            time.sleep(2)
+            
+            # 步骤 4: 检查是否需要登录
+            print(f"[DEBUG] 检查登录状态...")
+            try:
+                # 查找登录按钮
+                login_button = driver.find_element(By.XPATH, "//button[contains(text(), '登录') or contains(text(), 'Sign in') or contains(text(), 'Login')]")
+                print(f"[DEBUG] 需要登录，开始自动登录...")
+                
+                # 点击登录按钮
+                login_button.click()
+                time.sleep(2)
+                
+                # 输入邮箱
+                print(f"[DEBUG] 输入邮箱...")
+                email_input = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, "//input[@type='email' or @name='email']"))
+                )
+                email_input.clear()
+                email_input.send_keys(EMAIL)
+                time.sleep(1)
+                
+                # 输入密码
+                print(f"[DEBUG] 输入密码...")
+                password_input = driver.find_element(By.XPATH, "//input[@type='password' or @name='password']")
+                password_input.clear()
+                password_input.send_keys(PASSWORD)
+                time.sleep(1)
+                
+                # 提交登录
+                print(f"[DEBUG] 提交登录...")
+                submit_button = driver.find_element(By.XPATH, "//button[@type='submit' or contains(text(), '登录')]")
+                submit_button.click()
+                
+                # 等待登录完成
+                print(f"[DEBUG] 等待登录完成...")
+                time.sleep(5)
+                print(f"[DEBUG] ✅ 登录成功")
+                
+            except Exception as e:
+                print(f"[DEBUG] 已经登录或无需登录: {e}")
+            
+            # 步骤 5: 访问聊天页面
             chat_url = f"{BASE_URL}/zh/chat/{session_id}"
-            print(f"[DEBUG] 访问页面: {chat_url}")
+            print(f"[DEBUG] 访问聊天页面: {chat_url}")
             driver.get(chat_url)
             
-            # 等待页面加载和 AI 生成
+            # 步骤 6: 等待页面加载和 AI 生成
             print(f"[DEBUG] 等待 AI 生成回复...")
-            time.sleep(10)  # 等待 10 秒让 AI 生成
+            time.sleep(15)  # 等待 15 秒让 AI 生成
             
             print(f"[DEBUG] ✅ Selenium 触发完成")
             return {"success": True}
@@ -328,6 +382,9 @@ def trigger_ai_with_selenium(session_id, cookie_str):
             
     except Exception as e:
         print(f"[DEBUG] ❌ Selenium 错误: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
         import traceback
         traceback.print_exc()
         return {"success": False, "error": str(e)}
