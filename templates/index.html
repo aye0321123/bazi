@@ -642,15 +642,24 @@
         async function loadMessages() {
             try {
                 const response = await fetch('/api/messages');
+                
+                // 检查响应状态
+                if (!response.ok) {
+                    console.log('无法加载消息，可能未登录');
+                    return;
+                }
+                
                 const result = await response.json();
 
                 if (result.success) {
                     displayMessages(result.data);
                 } else {
-                    showAlert(result.error || '加载消息失败', 'error');
+                    // 不显示错误提示，因为可能是未登录
+                    console.log('加载消息失败:', result.error);
                 }
             } catch (error) {
-                showAlert('网络错误: ' + error.message, 'error');
+                // 不显示错误提示，因为可能是未登录
+                console.log('加载消息错误:', error.message);
             }
         }
 
