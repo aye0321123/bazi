@@ -37,12 +37,17 @@ ctx = ssl.create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 
-# 创建全局 HTTP 客户端
+# 创建全局 HTTP 客户端，增加重试机制
 http_client = urllib3.PoolManager(
     ssl_context=ctx,
     cert_reqs='CERT_NONE',
     assert_hostname=False,
-    timeout=urllib3.Timeout(connect=10.0, read=30.0)
+    timeout=urllib3.Timeout(connect=30.0, read=60.0),
+    retries=urllib3.Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[500, 502, 503, 504]
+    )
 )
 
 class BaziAIClient:
@@ -536,7 +541,12 @@ def test_connection():
     
     results = {
         "timestamp": datetime.now().isoformat(),
-        "tests": []
+        "tests": [],
+        "environment": {
+            "platform": os.name,
+            "python_version": os.sys.version,
+            "base_url": BASE_URL
+        }
     }
     
     # 测试 1: DNS 解析
@@ -554,9 +564,35 @@ def test_connection():
             "message": f"DNS 解析失败: {str(e)}"
         })
     
-    # 测试 2: HTTP 连接
+    # 测试 2: TCP 连接
     try:
-        response = http_client.request('GET', "https://www.bazi-ai.com", timeout=10.0)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(10)
+        result = sock.connect_ex(('www.bazi-ai.com', 443))
+        sock.close()
+        
+        if result == 0:
+            results["tests"].append({
+                "name": "TCP 连接",
+                "success": True,
+                "message": "成功连接到 443 端口"
+            })
+        else:
+            results["tests"].append({
+                "name": "TCP 连接",
+                "success": False,
+                "message": f"无法连接到 443 端口，错误码: {result}"
+            })
+    except Exception as e:
+        results["tests"].append({
+            "name": "TCP 连接",
+            "success": False,
+            "message": f"连接测试失败: {str(e)}"
+        })
+    
+    # 测试 3: HTTP 连接
+    try:
+        response = http_client.request('GET', "https://www.bazi-ai.com", timeout=30.0)
         results["tests"].append({
             "name": "HTTP 连接",
             "success": True,
@@ -569,10 +605,10 @@ def test_connection():
             "message": f"连接失败: {str(e)}"
         })
     
-    # 测试 3: API 端点
+    # 测试 4: API 端点
     try:
         test_url = f"{BASE_URL}/api/chat-session/test/messages"
-        response = http_client.request('GET', test_url, timeout=10.0)
+        response = http_client.request('GET', test_url, timeout=30.0)
         results["tests"].append({
             "name": "API 端点",
             "success": True,
@@ -584,6 +620,16 @@ def test_connection():
             "success": False,
             "message": f"API 访问失败: {str(e)}"
         })
+    
+    # 计算成功率
+    total_tests = len(results["tests"])
+    successful_tests = sum(1 for test in results["tests"] if test["success"])
+    results["summary"] = {
+        "total": total_tests,
+        "successful": successful_tests,
+        "failed": total_tests - successful_tests,
+        "success_rate": f"{(successful_tests / total_tests * 100):.1f}%"
+    }
     
     return jsonify(results)
 
